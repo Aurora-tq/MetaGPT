@@ -15,6 +15,9 @@ from metagpt.schema import Message, Task, TaskResult
 from metagpt.strategy.task_type import TaskType
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.utils.common import CodeParser
+from metagpt.utils.common import write_json_file,read_json_file,format_trackback_info
+from metagpt.const import MESSAGE_ROUTE_TO_ALL, SERDESER_PATH
+from metagpt.utils.recovery_util import save_history
 
 REACT_THINK_PROMPT = """
 # User Requirement
@@ -46,6 +49,10 @@ class DataInterpreter(Role):
 
     @model_validator(mode="after")
     def set_plan_and_tool(self) -> "Interpreter":
+        if self.planner.plan.goal!='':
+            print("Plan already exists, skipping initialization.")
+            return self
+        print("Initializing plan and tool...")
         self._set_react_mode(react_mode=self.react_mode, max_react_loop=self.max_react_loop, auto_run=self.auto_run)
         self.use_plan = (
             self.react_mode == "plan_and_act"
@@ -96,8 +103,19 @@ class DataInterpreter(Role):
 
     async def _act_on_task(self, current_task: Task) -> TaskResult:
         """Useful in 'plan_and_act' mode. Wrap the output in a TaskResult for review and confirmation."""
+        print("The current_task is:", current_task)
+
+        # 执行任务的代码
         code, result, is_success = await self._write_and_exec_code()
         task_result = TaskResult(code=code, result=result, is_success=is_success)
+        # 只在任务类型为 'feature engineering' 时保存状态
+        if current_task.task_type == 'model train':
+            # fe_id = current_task.dependent_task_ids
+            stg_path = SERDESER_PATH.joinpath("team", "environment", "roles", f"{self.__class__.__name__}_{self.name}")
+            role_path = stg_path.joinpath("role.json")
+            # 将状态保存为 JSON 文件
+            write_json_file(role_path, self.model_dump())
+            save_history(role=self)
         return task_result
 
     async def _write_and_exec_code(self, max_retry: int = 3):
@@ -140,7 +158,6 @@ class DataInterpreter(Role):
                 review, _ = await self.planner.ask_review(auto_run=False, trigger=ReviewConst.CODE_REVIEW_TRIGGER)
                 if ReviewConst.CHANGE_WORDS[0] in review:
                     counter = 0  # redo the task again with help of human suggestions
-
         return code, result, success
 
     async def _write_code(

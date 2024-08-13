@@ -480,10 +480,10 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
 
     async def _plan_and_act(self) -> Message:
         """first plan, then execute an action sequence, i.e. _think (of a plan) -> _act -> _act -> ... Use llm to come up with the plan dynamically."""
-
-        # create initial plan and update it until confirmation
-        goal = self.rc.memory.get()[-1].content  # retreive latest user requirement
-        await self.planner.update_plan(goal=goal)
+        if not self.planner.plan.goal:
+            # create initial plan and update it until confirmation
+            goal = self.rc.memory.get()[-1].content  # retreive latest user requirement
+            await self.planner.update_plan(goal=goal)
 
         # take on tasks until all finished
         while self.planner.current_task:
@@ -501,6 +501,36 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
         self.rc.memory.add(rsp)  # add to persistent memory
 
         return rsp
+    
+    # async def _plan_and_act(self) -> Message:
+    #     """First plan, then execute an action sequence, i.e. _think (of a plan) -> _act -> _act -> ... Use llm to come up with the plan dynamically."""
+
+    #     # create initial plan and update it until confirmation
+    #     goal = self.rc.memory.get()[-1].content  # retrieve latest user requirement
+    #     await self.planner.update_plan(goal=goal)
+
+    #     # take on tasks until all finished
+    #     while self.planner.current_task:
+    #         task = self.planner.current_task
+    #         logger.info(f"Ready to take on task {task}")
+    #         print("task.task_type",task.task_type)
+    #         # Check if the current task type is "data processing" and interrupt if so
+    #         if task.task_type == "data processing":
+    #             logger.info("Task type is 'data processing', interrupting the process and returning current result.")
+    #             current_result = self.planner.get_useful_memories()[0]  # Assuming this returns the current plan status
+    #             self.rc.memory.add(current_result)  # Save current result to memory
+    #             return current_result  # Return the current result and exit
+
+    #         # take on current task
+    #         task_result = await self._act_on_task(task)
+
+    #         # process the result, such as reviewing, confirming, plan updating
+    #         await self.planner.process_task_result(task_result)
+
+    #     rsp = self.planner.get_useful_memories()[0]  # return the completed plan as a response
+    #     self.rc.memory.add(rsp)  # add to persistent memory
+
+    #     return rsp
 
     async def _act_on_task(self, current_task: Task) -> TaskResult:
         """Taking specific action to handle one task in plan
@@ -536,6 +566,13 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
     @role_raise_decorator
     async def run(self, with_message=None) -> Message | None:
         """Observe, and think and act based on the results of the observation"""
+        if with_message.content == "continue":
+            rsp = await self.react()
+            # 重置下一步行动
+            self.set_todo(None)
+            # 发送响应消息给 Environment 对象，以便它将消息传递给订阅者
+            self.publish_message(rsp)
+            return rsp
         if with_message:
             msg = None
             if isinstance(with_message, str):
@@ -551,7 +588,6 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
             # If there is no new information, suspend and wait
             logger.debug(f"{self._setting}: no news. waiting.")
             return
-
         rsp = await self.react()
 
         # Reset the next action to be taken.
