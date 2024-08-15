@@ -15,7 +15,7 @@ from metagpt.schema import Message, Task, TaskResult
 from metagpt.strategy.task_type import TaskType
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.utils.common import CodeParser
-from metagpt.utils.common import write_json_file,read_json_file,format_trackback_info
+from metagpt.utils.common import write_json_file, read_json_file, format_trackback_info
 from metagpt.const import MESSAGE_ROUTE_TO_ALL, SERDESER_PATH
 from metagpt.utils.recovery_util import save_history
 
@@ -108,14 +108,6 @@ class DataInterpreter(Role):
         # 执行任务的代码
         code, result, is_success = await self._write_and_exec_code()
         task_result = TaskResult(code=code, result=result, is_success=is_success)
-        # 只在任务类型为 'feature engineering' 时保存状态
-        if current_task.task_type == 'model train':
-            # fe_id = current_task.dependent_task_ids
-            stg_path = SERDESER_PATH.joinpath("team", "environment", "roles", f"{self.__class__.__name__}_{self.name}")
-            role_path = stg_path.joinpath("role.json")
-            # 将状态保存为 JSON 文件
-            write_json_file(role_path, self.model_dump())
-            save_history(role=self)
         return task_result
 
     async def _write_and_exec_code(self, max_retry: int = 3):

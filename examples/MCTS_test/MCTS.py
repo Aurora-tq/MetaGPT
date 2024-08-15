@@ -1,23 +1,47 @@
 import random
 import math
 import numpy as np
+import os
 from collections import defaultdict
 from metagpt.roles.di.data_interpreter import DataInterpreter
 from metagpt.logs import logger
 from InsightGenerate import InsightGenerator
+from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
+from metagpt.utils.common import write_json_file, read_json_file, format_trackback_info
+
+
+def init_di_root_node():
+    role = DataInterpreter()
+    initial_state = role.run(with_message='continue')
+    return initial_state
+
+
 
 class Node:
-    def __init__(self, parent=None, state = None, action=None,value = 0 ,depth = 0):
+    def __init__(self, parent=None, state = None, action=None, value = 0, **kwargs):
         self.state = state
         self.action = action
         self.value = value
-        self.depth = depth
         self.visited = 0
-        self.id = id(self)
         self.parent = parent
         self.children = []
+        self.depth = self.generate_depth()
+        self.id = self.generate_id()
 
-    def is_terminal(self,depth):
+    def generate_depth(self):
+        if self.parent is None:
+            return 0
+        else:
+            return self.parent.depth + 1
+
+    def generate_id(self):
+        if self.parent is None:
+            return "0"
+        else:
+            num_sibling = len(self.parent.children)
+            return f"{self.depth}-{num_sibling + 1}"
+
+    def is_terminal(self, depth):
         return depth == 4
     
     def is_fully_expanded(self):
@@ -35,7 +59,24 @@ class Node:
 
     def update(self, reward):
         self.value += reward
-        self.visited += 1
+        self.visited += 1    
+
+    def get_role_path(self):
+        fname = f"Node-{self.id}.json"
+        role_path = os.path.join(self.state["role_dir"], fname)
+        return role_path
+    
+    def load_node(self):
+        role_dict = read_json_file(self.get_role_path())
+        if role_dict.get('tool_recommender') is None:
+            role_dict['tool_recommender'] = ToolRecommender() 
+        elif isinstance(role_dict.get('tool_recommender', {}).get('tools'), dict):
+            role_dict['tool_recommender']['tools'] = list(role_dict['tool_recommender']['tools'].keys())
+        return DataInterpreter(**role_dict)
+    
+    async def run_node(self):
+        role = self.load_node()
+        await role.run(with_message='continue')
 
 class MCTS:
     #data_path
@@ -103,9 +144,9 @@ class MCTS:
     #     return self.best_path(root)
     
     async def search(self, initial_state,task):
-        root = Node(parent=None,state = initial_state, action=None, value=0, depth=0)
+        root = Node(parent=None, state = initial_state, action=None, value=0, depth=0)
         value = self.evaluate_node(root)
-        root = Node(parent=None,state = initial_state, action=None, value=value, depth=0)
+        root = Node(parent=None, state = initial_state, action=None, value=value, depth=0)
         print("根节点的状态为:",root.state)
         print("根节点的得分为:",root.value)
         await self.expand(root, 1,task)
