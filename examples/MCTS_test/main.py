@@ -13,16 +13,21 @@ from metagpt.actions.add_requirement import UserRequirement
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.utils.common import write_json_file,read_json_file,format_trackback_info
 import nest_asyncio
+from examples.MCTS_test.utils import load_data_config
+import os
 nest_asyncio.apply()
 
 logger = logging.getLogger(__name__)
+
+
+data_config = load_data_config()
 
 @pytest.mark.asyncio
 async def get_role_json(context):
     # 实例化 DataInterpreter 对象
     data_interpreter = DataInterpreter()
     print(data_interpreter.planner.plan.goal)
-    await data_interpreter.run(with_message=Message(content=context, cause_by=UserRequirement))
+    await data_interpreter.run(with_message=context)
     # save_history(role=data_interpreter)
 
 async def use_role_json(role_path):
@@ -33,12 +38,12 @@ async def use_role_json(role_path):
     # if isinstance(role_dict.get('tool_recommender', {}).get('tools'), dict):
     #     role_dict['tool_recommender']['tools'] = list(role_dict['tool_recommender']['tools'].keys())
     new_data_interpreter = DataInterpreter(**role_dict)
-    await new_data_interpreter.run(with_message=Message(content='continue', cause_by=UserRequirement))
+    await new_data_interpreter.run(with_message='continue')
 
 async def main():
     root_path = "/Users/aurora/Desktop/MCTS_test"
-    dataset_name = "House Price"
-    data_path, user_requirement = dataload(dataset_name)
+    dataset_name = "house_prices"
+    data_path, user_requirement = dataload(dataset_name, data_config)
     train_path = f"{data_path}/split_train.csv"
     eval_path = f"{data_path}/split_eval.csv"
     task_type = 'EDA'
@@ -51,8 +56,8 @@ async def main():
     query = "Analyze the 'load_wine' dataset from sklearn to predict wine quality. Visualize relationships between features, use machine learning for classification, and report model accuracy. Include analysis and prediction visualizations. Perform data analysis, data preprocessing, feature engineering, and modeling to predict the target. Don't need to plot!"
     # initial_state = await role.run(query)
     # logger.info(initial_state)
-    await get_role_json(query)
-    role_path = "/Users/aurora/Desktop/metaGPT_new/MetaGPT/workspace/storage/team/environment/roles/DataInterpreter_David/role.json"
+    # await get_role_json(query)
+    role_path = os.path.join(data_config["work_dir"], data_config["role_dir"], "role.json")
     await use_role_json(role_path)
     # # 执行MCTS搜索
     # best_node = await mcts.search(initial_state,task)

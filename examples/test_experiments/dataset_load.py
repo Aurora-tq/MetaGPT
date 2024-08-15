@@ -1,4 +1,4 @@
-
+import os
 def dataload(dataset_name):
     # Define data paths and user requirements for different datasets
     data_info = {
@@ -25,4 +25,15 @@ def dataload(dataset_name):
     else:
         raise ValueError(f"Dataset {dataset_name} not found in data info")
 
+
+def dataload(dataset_name, config):
+
+    datasets_dir = config['datasets_dir']
+    if dataset_name in config['datasets']:
+        dataset = config['datasets'][dataset_name]
+        data_path = os.path.join(datasets_dir, dataset['dataset'])
+        user_requirement = dataset['user_requirement']
+        return data_path, user_requirement
+    else:
+        raise ValueError(f"Dataset {dataset_name} not found in config file. Available datasets: {config['datasets'].keys()}")
 

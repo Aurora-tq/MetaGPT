@@ -566,7 +566,7 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
     @role_raise_decorator
     async def run(self, with_message=None) -> Message | None:
         """Observe, and think and act based on the results of the observation"""
-        if with_message.content == "continue":
+        if with_message == "continue":
             rsp = await self.react()
             # 重置下一步行动
             self.set_todo(None)
