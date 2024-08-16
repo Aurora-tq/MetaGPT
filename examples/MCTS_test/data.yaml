@@ -22,4 +22,4 @@ datasets:
     user_requirement: "This is a regression problem. Your goal is to predict the value of transactions for potential customers. The target column is target. Perform data analysis, data preprocessing, feature engineering, and modeling to predict the target. Report RMSE on the eval data. Don't need to plot."
 
 work_dir: D:/work/MG-open/MetaGPT/workspace
-role_dir: storage/team/environment/roles/DataInterpreter_David
+role_dir: storage/team/environment/roles/ResearchAssistant_David

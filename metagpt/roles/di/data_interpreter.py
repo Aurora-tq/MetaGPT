@@ -49,7 +49,7 @@ class DataInterpreter(Role):
 
     @model_validator(mode="after")
     def set_plan_and_tool(self) -> "Interpreter":
-        if self.planner.plan.goal!='':
+        if self.planner.plan.goal != '':
             print("Plan already exists, skipping initialization.")
             return self
         print("Initializing plan and tool...")

@@ -4,16 +4,25 @@ import numpy as np
 import os
 from collections import defaultdict
 from metagpt.roles.di.data_interpreter import DataInterpreter
+from metagpt.roles.di.research_assistant import ResearchAssistant
 from metagpt.logs import logger
 from InsightGenerate import InsightGenerator
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
 from metagpt.utils.common import write_json_file, read_json_file, format_trackback_info
+from examples.MCTS_test.utils import load_data_config
+import asyncio
 
 
-def init_di_root_node():
-    role = DataInterpreter()
-    initial_state = role.run(with_message='continue')
-    return initial_state
+def initialize_di_root_node(requirement, data_config):
+    start_task_id = 1
+    role = ResearchAssistant(node_id="0", start_task_id=start_task_id)
+    state = dict(
+        node_dir=os.path.join(data_config["work_dir"], data_config["role_dir"]),
+        requirement=requirement,
+        has_run=False,
+        start_task_id=start_task_id,
+    )
+    return role, Node(parent=None, state=state, action=None, value=0) 
 
 
 
@@ -39,7 +48,7 @@ class Node:
             return "0"
         else:
             num_sibling = len(self.parent.children)
-            return f"{self.depth}-{num_sibling + 1}"
+            return f"{self.parent.id}-{num_sibling}"
 
     def is_terminal(self, depth):
         return depth == 4
@@ -59,11 +68,11 @@ class Node:
 
     def update(self, reward):
         self.value += reward
-        self.visited += 1    
+        self.visited += 1
 
     def get_role_path(self):
         fname = f"Node-{self.id}.json"
-        role_path = os.path.join(self.state["role_dir"], fname)
+        role_path = os.path.join(self.state["node_dir"], fname)
         return role_path
     
     def load_node(self):
@@ -72,11 +81,20 @@ class Node:
             role_dict['tool_recommender'] = ToolRecommender() 
         elif isinstance(role_dict.get('tool_recommender', {}).get('tools'), dict):
             role_dict['tool_recommender']['tools'] = list(role_dict['tool_recommender']['tools'].keys())
-        return DataInterpreter(**role_dict)
+        return ResearchAssistant(**role_dict)
+    
+    def expand(self):
+        
+        for insight in insights:
+            role = self.load_node()
+            change_instruction(role, insight)
+            node = Node(parent=self, state=None, action=insight, value=0)
+            self.add_child(node)
+        
     
     async def run_node(self):
         role = self.load_node()
-        await role.run(with_message='continue')
+        await role.run('continue')
 
 class MCTS:
     #data_path
@@ -96,7 +114,7 @@ class MCTS:
             new_state, action = await self.generate_code(node.state,task_type,task)
             value = self.evaluate_node(node)
             print("该节点的评分为:",value)
-            child_node = Node(parent=node,state=new_state, action=action, value = value ,depth=current_depth)
+            child_node = Node(parent=node, state=new_state, action=action, value=value)
             node.add_child(child_node)
         return node.children
     
@@ -118,7 +136,7 @@ class MCTS:
         else:
             # Get a candidate node and simulate recursively
             # 应该是从action space中随机抽取动作，所以更新动作后再重新生成状态
-            candidate = await self.expand(node,current_depth) #这里存疑，就是获取候选集，是怎么样获取的？
+            candidate = await self.expand(node, current_depth) #这里存疑，就是获取候选集，是怎么样获取的？
             return await self.simulate(candidate, simulation_depth=simulation_depth-1)
 
 
@@ -144,9 +162,9 @@ class MCTS:
     #     return self.best_path(root)
     
     async def search(self, initial_state,task):
-        root = Node(parent=None, state = initial_state, action=None, value=0, depth=0)
+        root = Node(parent=None, state = initial_state, action=None, value=0)
         value = self.evaluate_node(root)
-        root = Node(parent=None, state = initial_state, action=None, value=value, depth=0)
+        root = Node(parent=None, state = initial_state, action=None, value=value)
         print("根节点的状态为:",root.state)
         print("根节点的得分为:",root.value)
         await self.expand(root, 1,task)

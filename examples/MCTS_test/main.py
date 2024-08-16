@@ -11,7 +11,7 @@ from metagpt.roles.di.data_interpreter import DataInterpreter
 from metagpt.const import MESSAGE_ROUTE_TO_ALL, SERDESER_PATH
 from metagpt.actions.add_requirement import UserRequirement
 from metagpt.tools.tool_recommend import BM25ToolRecommender, ToolRecommender
-from metagpt.utils.common import write_json_file,read_json_file,format_trackback_info
+from metagpt.utils.common import write_json_file, read_json_file, format_trackback_info
 import nest_asyncio
 from examples.MCTS_test.utils import load_data_config
 import os
@@ -35,8 +35,8 @@ async def use_role_json(role_path):
     role_dict = read_json_file(role_path)
     if role_dict.get('tool_recommender') is None:
         role_dict['tool_recommender'] = ToolRecommender() 
-    # if isinstance(role_dict.get('tool_recommender', {}).get('tools'), dict):
-    #     role_dict['tool_recommender']['tools'] = list(role_dict['tool_recommender']['tools'].keys())
+    elif isinstance(role_dict.get('tool_recommender', {}).get('tools'), dict):
+        role_dict['tool_recommender']['tools'] = list(role_dict['tool_recommender']['tools'].keys())
     new_data_interpreter = DataInterpreter(**role_dict)
     await new_data_interpreter.run(with_message='continue')
 
@@ -72,5 +72,6 @@ async def main():
     # path.reverse()
     # for state, action in path:
     #     print(f"Action: {action}\nState:\n{state}\n")
+    
 
 asyncio.run(main())
