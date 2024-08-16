@@ -10,7 +10,7 @@ from metagpt.const import DATA_PATH
 from metagpt.utils.common import write_json_file
 
 
-def save_code_file(name: str, code_context: str, file_format: str = "py") -> None:
+def save_code_file(name: str, code_context: str, file_format: str = "py", save_dir: str = None) -> None:
     """
     Save code files to a specified path.
 
@@ -23,11 +23,14 @@ def save_code_file(name: str, code_context: str, file_format: str = "py") -> Non
     Returns:
     - None
     """
-    # Create the folder path if it doesn't exist
-    os.makedirs(name=DATA_PATH / "output" / f"{name}", exist_ok=True)
+    if save_dir:
+        file_path = save_dir / f"{name}.{file_format}"
+    else:
+        # Create the folder path if it doesn't exist
+        os.makedirs(name=DATA_PATH / "output" / f"{name}", exist_ok=True)
 
-    # Choose to save as a Python file or a JSON file based on the file format
-    file_path = DATA_PATH / "output" / f"{name}/code.{file_format}"
+        # Choose to save as a Python file or a JSON file based on the file format
+        file_path = DATA_PATH / "output" / f"{name}/code.{file_format}"
     if file_format == "py":
         file_path.write_text(code_context + "\n\n", encoding="utf-8")
     elif file_format == "json":

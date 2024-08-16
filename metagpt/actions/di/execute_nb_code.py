@@ -51,6 +51,7 @@ class ExecuteNbCode(Action):
 
     async def build(self):
         if self.nb_client.kc is None or not await self.nb_client.kc.is_alive():
+            print("Building NotebookClient...")
             self.nb_client.create_kernel_manager()
             self.nb_client.start_new_kernel()
             self.nb_client.start_new_kernel_client()
@@ -174,7 +175,7 @@ class ExecuteNbCode(Action):
         """
         try:
             await self.nb_client.async_execute_cell(cell, cell_index)
-            return self.parse_outputs(self.nb.cells[-1].outputs)
+            return self.parse_outputs(self.nb.cells[cell_index].outputs)
         except CellTimeoutError:
             assert self.nb_client.km is not None
             await self.nb_client.km.interrupt_kernel()

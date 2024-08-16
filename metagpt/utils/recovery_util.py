@@ -14,25 +14,8 @@ from metagpt.utils.common import read_json_file
 from metagpt.utils.save_code import save_code_file
 
 
-def load_history(save_dir: str = ""):
-    """
-    Load plan and code execution history from the specified save directory.
 
-    Args:
-        save_dir (str): The directory from which to load the history.
-
-    Returns:
-        Tuple: A tuple containing the loaded plan and notebook.
-    """
-
-    plan_path = Path(save_dir) / "plan.json"
-    nb_path = Path(save_dir) / "history_nb" / "code.ipynb"
-    plan = read_json_file(plan_path)
-    nb = nbformat.read(open(nb_path, "r", encoding="utf-8"), as_version=nbformat.NO_CONVERT)
-    return plan, nb
-
-
-def save_history(role: Role, save_dir: str = ""):
+def save_history(role: Role, save_dir: str = "", name: str = "") -> Path:
     """
     Save plan and code execution history to the specified directory.
 
@@ -44,7 +27,10 @@ def save_history(role: Role, save_dir: str = ""):
         Path: The path to the saved history directory.
     """
     record_time = datetime.now().strftime("%Y-%m-%d_%H-%M-%S")
-    save_path = DATA_PATH / "output" / f"{record_time}"
+    if save_dir:
+        save_path = Path(save_dir)
+    else:
+        save_path = DATA_PATH / "output" / f"{record_time}"
 
     # overwrite exist trajectory
     save_path.mkdir(parents=True, exist_ok=True)
@@ -54,5 +40,7 @@ def save_history(role: Role, save_dir: str = ""):
     with open(save_path / "plan.json", "w", encoding="utf-8") as plan_file:
         json.dump(plan, plan_file, indent=4, ensure_ascii=False)
 
-    save_code_file(name=Path(record_time), code_context=role.execute_code.nb, file_format="ipynb")
+    if not name:
+        name = Path(record_time)
+    save_code_file(name=name, code_context=role.execute_code.nb, file_format="ipynb", save_dir=save_path)
     return save_path

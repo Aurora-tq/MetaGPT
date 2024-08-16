@@ -33,8 +33,12 @@ import json
 from metagpt.llm import LLM
 from metagpt.schema import Message
 from metagpt.logs import logger
+from examples.MCTS_test.utils import load_data_config
+DATA_CONFIG = load_data_config()
 
 class InsightGenerator:
+    data_config = DATA_CONFIG
+
     @staticmethod
     def load_json_data(json_dir):      
         with open(json_dir, "r") as file:
@@ -88,7 +92,7 @@ class InsightGenerator:
         return code_str 
     
     @staticmethod
-    def load_insight(data,task_type):
+    def load_insight(data, task_type):
         new_data = []
         data = data[0]["Insights"]
         _data ={
@@ -119,15 +123,15 @@ class InsightGenerator:
         
     
     #这里还需要改正
-    async def generate_insights(self, baseline_code,task_type):
+    async def generate_insights(self, baseline_code, task_type):
         # Step 1: 得到父节点的code
         # code = self.load_baseline_code(parent_node)
         #score = parent_node.score
         # Step 2: 从经验池中抽取经验
-        experience_pool_path = '/Users/aurora/Desktop/MCTS_test/analysis_pool_sample.json' #目前是直接传入一个经验池的path，后续可能需要更改
+        experience_pool_path = self.data_config["analysis_pool_dir"] #目前是直接传入一个经验池的path，后续可能需要更改
         experience_pool = self.load_analysis_pool(experience_pool_path)
         selected_experiences = self._random_sample(experience_pool, max(25,int(len(experience_pool)/2))) #随机采样
-        insight = await self.summarize_insights(selected_experiences, baseline_code,task_type)  # Add the score if applicable
-        return self.load_insight(insight,task_type)
+        insight = await self.summarize_insights(selected_experiences, baseline_code, task_type)  # Add the score if applicable
+        return self.load_insight(insight, task_type)
         # 注意: 返回的为一个list，然后这个list的形式为
         # [{"Data_process insight:","...."},{"Feature Engineering insight:","...."},{"Model Training insight:","...."}]

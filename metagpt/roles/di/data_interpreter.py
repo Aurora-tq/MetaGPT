@@ -50,6 +50,8 @@ class DataInterpreter(Role):
     @model_validator(mode="after")
     def set_plan_and_tool(self) -> "Interpreter":
         if self.planner.plan.goal != '':
+            self.set_actions([WriteAnalysisCode])
+            self._set_state(0)
             print("Plan already exists, skipping initialization.")
             return self
         print("Initializing plan and tool...")
@@ -191,7 +193,7 @@ class DataInterpreter(Role):
         if not code.strip():
             return
         result, success = await self.execute_code.run(code)
+        logger.info("success" if success else "failed")
         if success:
-            print(result)
             data_info = DATA_INFO.format(info=result)
             self.working_memory.add(Message(content=data_info, role="user", cause_by=CheckData))
