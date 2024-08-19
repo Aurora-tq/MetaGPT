@@ -566,13 +566,6 @@ class Role(SerializationMixin, ContextMixin, BaseModel):
     @role_raise_decorator
     async def run(self, with_message=None) -> Message | None:
         """Observe, and think and act based on the results of the observation"""
-        if with_message.content == "continue":
-            rsp = await self.react()
-            # 重置下一步行动
-            self.set_todo(None)
-            # 发送响应消息给 Environment 对象，以便它将消息传递给订阅者
-            self.publish_message(rsp)
-            return rsp
         if with_message:
             msg = None
             if isinstance(with_message, str):
