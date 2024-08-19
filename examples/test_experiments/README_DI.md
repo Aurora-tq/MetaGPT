@@ -1,6 +1,8 @@
 ## How to use?
 1.step1: run kaggle_to_analysis.py
 
+kaggle_file_path = your/path/MetaGPT/examples/test_experiments/Kaggle_top/{dataset_name}
+
 2.step2: run first_analysis_to_code.py
 
 3.step3: run code_to_analysis.py
